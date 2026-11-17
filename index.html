@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Prompt Architect — Anatomy Prompt Builder</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            900: '#141413',
+                            800: '#1c1b1a',
+                            700: '#262523',
+                            600: '#33312e'
+                        },
+                        claude: {
+                            orange: '#d97757',
+                            amber: '#e08e45',
+                            blue: '#4a90e2',
+                            emerald: '#48bb78',
+                            rose: '#e55353',
+                            purple: '#9f7aea'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar untuk kenyamanan baca */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #141413;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #33312e;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4743;
+        }
+        
+        /* Animasi halus saat muncul */
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-reveal {
+            animation: fadeSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-surface-900 text-stone-200 font-sans min-h-screen flex flex-col selection:bg-claude-orange/30 selection:text-white">
+
+    <!-- Toast Notification Container (Pengganti alert) -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="border-b border-stone-800/80 bg-surface-900/90 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <!-- Ikon Spark/Sunburst terinspirasi dari gambar -->
+                <div class="w-9 h-9 rounded-xl bg-claude-orange/15 border border-claude-orange/30 flex items-center justify-center text-claude-orange shadow-sm">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-semibold tracking-tight text-stone-100 flex items-center gap-2">
+                        Anatomy Prompt Builder
+                        <span class="hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-stone-800 text-stone-400 border border-stone-700">6-Pillar Framework</span>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="loadExampleFromImage()" class="text-xs sm:text-sm px-3 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-stone-300 border border-stone-700/80 transition flex items-center gap-1.5" title="Muat contoh asli dari gambar">
+                    <i class="fa-solid fa-wand-magic-sparkles text-claude-orange text-xs"></i>
+                    <span>Contoh Gambar</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        <!-- Top Section: Input Prompt Singkat -->
+        <section class="bg-surface-800 border border-stone-800 rounded-2xl p-4 sm:p-6 shadow-xl mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <label for="shortPromptInput" class="text-sm font-medium text-stone-200 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-claude-orange"></span>
+                    Masukkan Ide / Prompt Singkat Anda
+                </label>
+                
+                <!-- Pilihan Bahasa Output Master Prompt -->
+                <div class="flex items-center gap-2 self-start sm:self-auto">
+                    <span class="text-xs text-stone-400">Bahasa Hasil:</span>
+                    <div class="inline-flex rounded-lg bg-surface-900 p-0.5 border border-stone-800">
+                        <button type="button" id="langIdBtn" onclick="setOutputLang('id')" class="px-2.5 py-1 text-xs font-medium rounded-md bg-stone-700 text-white transition">
+                            Indonesia
+                        </button>
+                        <button type="button" id="langEnBtn" onclick="setOutputLang('en')" class="px-2.5 py-1 text-xs font-medium rounded-md text-stone-400 hover:text-stone-200 transition">
+                            English
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative">
+                <textarea 
+                    id="shortPromptInput" 
+                    rows="3" 
+                    class="w-full bg-surface-900 border border-stone-700/80 focus:border-claude-orange focus:ring-1 focus:ring-claude-orange rounded-xl p-3.5 text-sm sm:text-base text-stone-100 placeholder-stone-500 transition resize-none outline-none"
+                    placeholder="Contoh: Buatkan strategi peluncuran 90 hari untuk aplikasi manajemen tugas berbasis AI khusus founder startup dengan tim kecil..."
+                ></textarea>
+            </div>
+
+            <!-- Quick Presets & Submit Action -->
+            <div class="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-xs text-stone-500 mr-1">Coba cepat:</span>
+                    <button type="button" onclick="fillPreset('Buatkan rencana konten TikTok 30 hari untuk brand kopi lokal dengan budget minim.')" class="text-xs px-2.5 py-1 rounded-lg bg-surface-900 hover:bg-surface-700 text-stone-400 hover:text-stone-200 border border-stone-800 transition">
+                        ☕ Konten TikTok Kopi
+                    </button>
+                    <button type="button" onclick="fillPreset('Audit kode backend Node.js yang lambat saat menangani 10.000 request bersamaan dan berikan solusi optimasi.')" class="text-xs px-2.5 py-1 rounded-lg bg-surface-900 hover:bg-surface-700 text-stone-400 hover:text-stone-200 border border-stone-800 transition">
+                        ⚡ Optimasi Backend
+                    </button>
+                    <button type="button" onclick="fillPreset('Susun kurikulum belajar UI/UX Design dari nol sampai siap kerja dalam 8 minggu.')" class="text-xs px-2.5 py-1 rounded-lg bg-surface-900 hover:bg-surface-700 text-stone-400 hover:text-stone-200 border border-stone-800 transition">
+                        🎨 Kurikulum UI/UX
+                    </button>
+                </div>
+
+                <button 
+                    id="generateBtn" 
+                    onclick="analyzeAndBuildPrompt()" 
+                    class="w-full md:w-auto px-6 py-2.5 rounded-xl bg-claude-orange hover:bg-[#e38262] active:scale-[0.99] text-white font-medium text-sm shadow-lg shadow-claude-orange/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>Analisis & Bangun Master Prompt</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Main Workspace Grid: Kiri (Anatomi 6 Bagian) & Kanan (Hasil Final Master Prompt) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+            
+            <!-- Kolom Kiri (7 cols): Breakdown Anatomi Sesuai Gambar -->
+            <div class="lg:col-span-7 space-y-4">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-claude-orange"></i>
+                        Bedah Anatomi Prompt (Editable)
+                    </h2>
+                    <span class="text-xs text-stone-500">Klik teks untuk mengedit langsung</span>
+                </div>
+
+                <!-- Card Container yang meniru visual "The Anatomy of a Claude prompt" -->
+                <div id="anatomyWrapper" class="bg-surface-800 border border-stone-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-5 relative overflow-hidden">
+                    
+                    <!-- Loading Overlay -->
+                    <div id="loadingOverlay" class="hidden absolute inset-0 bg-surface-800/85 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 text-center">
+                        <div class="w-12 h-12 rounded-2xl bg-claude-orange/20 border border-claude-orange/40 flex items-center justify-center mb-3 animate-pulse">
+                            <i class="fa-solid fa-sparkles text-claude-orange text-xl animate-spin"></i>
+                        </div>
+                        <p class="text-sm font-medium text-stone-200">Menganalisis intensi prompt Anda...</p>
+                        <p class="text-xs text-stone-400 mt-1 max-w-xs">Menyusun Role, Task, Context, Reasoning, Stop Conditions, dan Output format.</p>
+                    </div>
+
+                    <!-- Card Header ala gambar -->
+                    <div class="border-b border-stone-700/70 pb-3.5 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-claude-orange text-lg">✳</span>
+                            <span class="font-serif text-base sm:text-lg text-stone-100 tracking-wide">The Anatomy of a Master Prompt</span>
+                        </div>
+                        <span id="statusBadge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-stone-700/60 text-stone-400">
+                            Siap Disesuaikan
+                        </span>
+                    </div>
+
+                    <!-- 1. ROLE (Biru) -->
+                    <div class="group relative pl-4 border-l-2 border-claude-blue transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-claude-blue flex items-center gap-1.5">
+                                1. Role
+                            </span>
+                            <span class="text-[11px] text-stone-500">Peran & Keahlian AI</span>
+                        </div>
+                        <textarea id="field-role" rows="2" oninput="syncMasterPrompt()" class="w-full bg-surface-900/60 hover:bg-surface-900 focus:bg-surface-900 border border-transparent focus:border-claude-blue/50 rounded-lg p-2.5 text-sm text-stone-200 leading-relaxed outline-none transition resize-y" placeholder="Contoh: Act as a senior go-to-market strategist..."></textarea>
+                    </div>
+
+                    <!-- 2. TASK (Oranye/Amber) -->
+                    <div class="group relative pl-4 border-l-2 border-claude-amber transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-claude-amber flex items-center gap-1.5">
+                                2. Task
+                            </span>
+                            <span class="text-[11px] text-stone-500">Tugas Utama & Tujuan Akhir</span>
+                        </div>
+                        <textarea id="field-task" rows="2" oninput="syncMasterPrompt()" class="w-full bg-surface-900/60 hover:bg-surface-900 focus:bg-surface-900 border border-transparent focus:border-claude-amber/50 rounded-lg p-2.5 text-sm text-stone-200 leading-relaxed outline-none transition resize-y" placeholder="Contoh: Build a 90-day launch plan..."></textarea>
+                    </div>
+
+                    <!-- 3. CONTEXT (Hijau Emerald) -->
+                    <div class="group relative pl-4 border-l-2 border-claude-emerald transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-claude-emerald flex items-center gap-1.5">
+                                3. Context
+                            </span>
+                            <span class="text-[11px] text-stone-500">Batasan, Fakta & Risiko</span>
+                        </div>
+                        <textarea id="field-context" rows="4" oninput="syncMasterPrompt()" class="w-full bg-surface-900/60 hover:bg-surface-900 focus:bg-surface-900 border border-transparent focus:border-claude-emerald/50 rounded-lg p-2.5 text-sm text-stone-200 leading-relaxed outline-none transition resize-y" placeholder="Here's what I know:&#10;- Product: ...&#10;- Team: ...&#10;- Resources: ...&#10;- Key Risks: ..."></textarea>
+                    </div>
+
+                    <!-- 4. REASONING (Oranye Terang) -->
+                    <div class="group relative pl-4 border-l-2 border-claude-orange transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-claude-orange flex items-center gap-1.5">
+                                4. Reasoning
+                            </span>
+                            <span class="text-[11px] text-stone-500">Logika & Cara Berpikir AI</span>
+                        </div>
+                        <textarea id="field-reasoning" rows="3" oninput="syncMasterPrompt()" class="w-full bg-surface-900/60 hover:bg-surface-900 focus:bg-surface-900 border border-transparent focus:border-claude-orange/50 rounded-lg p-2.5 text-sm text-stone-200 leading-relaxed outline-none transition resize-y" placeholder="Contoh: The goal is a crisp, launch-ready strategy. By locking in clarity upfront..."></textarea>
+                    </div>
+
+                    <!-- 5. STOP CONDITIONS (Merah Rose) -->
+                    <div class="group relative pl-4 border-l-2 border-claude-rose transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-claude-rose flex items-center gap-1.5">
+                                5. Stop Conditions
+                            </span>
+                            <span class="text-[11px] text-stone-500">Kriteria Selesai & Kualitas</span>
+                        </div>
+                        <textarea id="field-stop" rows="3" oninput="syncMasterPrompt()" class="w-full bg-surface-900/60 hover:bg-surface-900 focus:bg-surface-900 border border-transparent focus:border-claude-rose/50 rounded-lg p-2.5 text-sm text-stone-200 leading-relaxed outline-none transition resize-y" placeholder="Only stop when:&#10;- Kriteria 1&#10;- Kriteria 2"></textarea>
+                    </div>
+
+                    <!-- 6. OUTPUT (Ungu Purple) -->
+                    <div class="group relative pl-4 border-l-2 border-claude-purple transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-claude-purple flex items-center gap-1.5">
+                                6. Output
+                            </span>
+                            <span class="text-[11px] text-stone-500">Format Penyajian Hasil</span>
+                        </div>
+                        <textarea id="field-output" rows="4" oninput="syncMasterPrompt()" class="w-full bg-surface-900/60 hover:bg-surface-900 focus:bg-surface-900 border border-transparent focus:border-claude-purple/50 rounded-lg p-2.5 text-sm text-stone-200 leading-relaxed outline-none transition resize-y" placeholder="Present as... For each item include: ..."></textarea>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Kolom Kanan (5 cols): Live Preview Master Prompt & Copy -->
+            <div class="lg:col-span-5 lg:sticky lg:top-24 space-y-4">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+                        <i class="fa-solid fa-terminal text-claude-emerald"></i>
+                        Master Prompt Siap Pakai
+                    </h2>
+                    <span id="wordCountBadge" class="text-xs font-mono text-stone-500">0 kata</span>
+                </div>
+
+                <div class="bg-surface-800 border border-stone-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+                    <!-- Toolbar Preview -->
+                    <div class="bg-surface-900/90 border-b border-stone-800 px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                            <span class="ml-1.5 text-xs font-mono text-stone-400">master-prompt.txt</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleXmlTags()" id="xmlToggleBtn" class="text-xs px-2.5 py-1 rounded-lg bg-surface-800 hover:bg-surface-700 text-stone-400 border border-stone-700 transition" title="Gunakan tag XML ala Claude (opsional)">
+                                <i class="fa-solid fa-code mr-1"></i>XML: OFF
+                            </button>
+                            <button onclick="copyMasterPrompt()" class="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                                <i class="fa-regular fa-copy"></i>
+                                <span>Salin</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Area Teks Master Prompt -->
+                    <div class="p-4 sm:p-5 bg-[#111110]">
+                        <textarea 
+                            id="finalMasterPrompt" 
+                            readonly 
+                            rows="18" 
+                            class="w-full bg-transparent font-mono text-xs sm:text-[13px] text-stone-200 leading-relaxed outline-none resize-none"
+                            placeholder="Hasil master prompt yang sudah digabungkan akan muncul di sini..."
+                        ></textarea>
+                    </div>
+
+                    <!-- Footer Info -->
+                    <div class="bg-surface-900/60 border-t border-stone-800/80 px-4 py-3 flex items-center justify-between text-xs text-stone-400">
+                        <span>Kompatibel dengan Claude, ChatGPT & Gemini</span>
+                        <button onclick="clearAllFields()" class="text-stone-500 hover:text-rose-400 transition">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Konfigurasi State Aplikasi
+        let currentLang = 'id'; // 'id' atau 'en'
+        let useXmlTags = false;
+        const apiKey = ""; // Disediakan otomatis oleh environment
+
+        // Elemen DOM
+        const fields = {
+            role: document.getElementById('field-role'),
+            task: document.getElementById('field-task'),
+            context: document.getElementById('field-context'),
+            reasoning: document.getElementById('field-reasoning'),
+            stop: document.getElementById('field-stop'),
+            output: document.getElementById('field-output')
+        };
+
+        const finalPromptEl = document.getElementById('finalMasterPrompt');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const generateBtn = document.getElementById('generateBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const wordCountBadge = document.getElementById('wordCountBadge');
+
+        // Inisialisasi halaman dengan contoh dari gambar
+        window.addEventListener('DOMContentLoaded', () => {
+            loadExampleFromImage(false);
+        });
+
+        // Menampilkan notifikasi Toast (menggantikan alert())
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = type === 'error' 
+                ? 'bg-rose-950/90 border-rose-700 text-rose-100' 
+                : 'bg-surface-800/95 border-stone-700 text-stone-100';
+            
+            const icon = type === 'error'
+                ? '<i class="fa-solid fa-circle-exclamation text-rose-400"></i>'
+                : '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl text-sm backdrop-blur-md animate-reveal ${colors}`;
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                toast.style.transition = 'all 0.25s ease';
+                setTimeout(() => toast.remove(), 250);
+            }, 3000);
+        }
+
+        // Mengatur bahasa output
+        function setOutputLang(lang) {
+            currentLang = lang;
+            const idBtn = document.getElementById('langIdBtn');
+            const enBtn = document.getElementById('langEnBtn');
+            
+            if (lang === 'id') {
+                idBtn.className = 'px-2.5 py-1 text-xs font-medium rounded-md bg-stone-700 text-white transition';
+                enBtn.className = 'px-2.5 py-1 text-xs font-medium rounded-md text-stone-400 hover:text-stone-200 transition';
+            } else {
+                enBtn.className = 'px-2.5 py-1 text-xs font-medium rounded-md bg-stone-700 text-white transition';
+                idBtn.className = 'px-2.5 py-1 text-xs font-medium rounded-md text-stone-400 hover:text-stone-200 transition';
+            }
+        }
+
+        // Toggle format tag XML (<role>, <task>, dll)
+        function toggleXmlTags() {
+            useXmlTags = !useXmlTags;
+            const btn = document.getElementById('xmlToggleBtn');
+            if (useXmlTags) {
+                btn.innerHTML = '<i class="fa-solid fa-code mr-1 text-claude-orange"></i>XML: ON';
+                btn.classList.add('border-claude-orange/60', 'text-stone-200');
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-code mr-1"></i>XML: OFF';
+                btn.classList.remove('border-claude-orange/60', 'text-stone-200');
+            }
+            syncMasterPrompt();
+        }
+
+        // Mengisi preset cepat pada input
+        function fillPreset(text) {
+            const input = document.getElementById('shortPromptInput');
+            input.value = text;
+            input.focus();
+        }
+
+        // Memuat contoh persis seperti pada gambar referensi
+        function loadExampleFromImage(notify = true) {
+            fields.role.value = "Act as a senior go-to-market strategist with deep expertise launching early-stage SaaS tools. Prioritize traction speed over brand perfection.";
+            fields.task.value = "Build a 90-day launch plan for a new AI productivity tool for founders. Validate the core messaging, end with a launch-ready brief.";
+            fields.context.value = "Here's what I know:\n- Product: AI task manager for founders (25-40).\n- Team: 2-person (Founder + Growth marketer).\n- Resources: Lean budget, 15-20 beta users.\n- Key Risks: Adoption, Retention, Positioning.";
+            fields.reasoning.value = "The goal is a crisp, launch-ready strategy. By locking in ICP clarity upfront and asking you to defend each step, the output will be truly actionable and founder-grade.";
+            fields.stop.value = "Only stop when:\n- A 12-week roadmap with 3-4 actions/week.\n- Every action links to the risk it addresses.\n- Plan ends with a final Launch Decision Gate.";
+            fields.output.value = "Present as a weekly sprint plan. For each action:\n- Action: The specific task to complete.\n- Owner: Founder, Growth lead, or Designer.\n- Risk: Adoption, Retention, or Positioning.\n- Rationale + Output: reasoning, deliverable.";
+            
+            syncMasterPrompt();
+            if (notify) showToast("Contoh struktur dari gambar berhasil dimuat!");
+        }
+
+        // Mengosongkan semua kolom
+        function clearAllFields() {
+            Object.values(fields).forEach(el => el.value = '');
+            document.getElementById('shortPromptInput').value = '';
+            syncMasterPrompt();
+            statusBadge.textContent = "Kosong";
+            showToast("Semua kolom telah dibersihkan.");
+        }
+
+        // Menggabungkan ke-6 bagian menjadi Master Prompt yang rapi
+        function syncMasterPrompt() {
+            const parts = [
+                { key: 'role', tag: 'role', val: fields.role.value.trim() },
+                { key: 'task', tag: 'task', val: fields.task.value.trim() },
+                { key: 'context', tag: 'context', val: fields.context.value.trim() },
+                { key: 'reasoning', tag: 'reasoning', val: fields.reasoning.value.trim() },
+                { key: 'stop', tag: 'stop_conditions', val: fields.stop.value.trim() },
+                { key: 'output', tag: 'output_format', val: fields.output.value.trim() }
+            ];
+
+            const activeParts = parts.filter(p => p.val.length > 0);
+            
+            let compiled = "";
+            if (useXmlTags) {
+                compiled = activeParts.map(p => `<${p.tag}>\n${p.val}\n</${p.tag}>`).join('\n\n');
+            } else {
+                compiled = activeParts.map(p => p.val).join('\n\n');
+            }
+
+            finalPromptEl.value = compiled;
+
+            // Update hitungan kata
+            const words = compiled ? compiled.split(/\s+/).filter(Boolean).length : 0;
+            wordCountBadge.textContent = `${words} kata`;
+        }
+
+        // Menyalin hasil ke clipboard menggunakan document.execCommand('copy')
+        function copyMasterPrompt() {
+            const text = finalPromptEl.value;
+            if (!text.trim()) {
+                showToast("Master prompt masih kosong!", "error");
+                return;
+            }
+
+            finalPromptEl.select();
+            finalPromptEl.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                showToast("Master Prompt berhasil disalin ke clipboard!");
+            } catch (err) {
+                showToast("Gagal menyalin teks. Silakan salin secara manual.", "error");
+            }
+            window.getSelection().removeAllRanges();
+        }
+
+        // Helper Exponential Backoff untuk Fetch API
+        async function fetchWithRetry(url, options, maxRetries = 4) {
+            let delay = 1000;
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    if (attempt === maxRetries) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // Fungsi Utama: Menganalisis prompt singkat dengan Gemini API
+        async function analyzeAndBuildPrompt() {
+            const shortPrompt = document.getElementById('shortPromptInput').value.trim();
+            if (!shortPrompt) {
+                showToast("Silakan masukkan ide atau prompt singkat terlebih dahulu.", "error");
+                document.getElementById('shortPromptInput').focus();
+                return;
+            }
+
+            // UI State Loading
+            loadingOverlay.classList.remove('hidden');
+            generateBtn.disabled = true;
+            statusBadge.textContent = "Memproses...";
+
+            const targetLanguage = currentLang === 'id' ? 'Bahasa Indonesia yang profesional, tajam, dan natural' : 'English (crisp, executive, and actionable)';
+
+            const systemInstruction = `Anda adalah Arsitek Master Prompt ahli yang merancang prompt berkinerja tinggi menggunakan kerangka "The Anatomy of a Claude Prompt" yang terdiri dari 6 komponen ketat:
+1. Role: Menetapkan persona senior/ahli spesifik serta prioritas/prinsip kerja utama (misal: "Bertindaklah sebagai... Prioritaskan X dibanding Y.").
+2. Task: Tugas utama yang spesifik, terukur, dan hasil akhir yang diharapkan.
+3. Context: Poin-poin informasi latar belakang ("Berikut informasi yang diketahui:" / "Here's what I know:") yang secara cerdas mengekstrapolasi detail relevan seperti Produk/Topik, Target Audiens, Sumber Daya/Batasan, dan Risiko Utama berdasarkan prompt singkat pengguna.
+4. Reasoning: Penjelasan mengapa strategi/pendekatan ini digunakan dan bagaimana AI harus berpikir secara kritis (mempertahankan setiap langkah, menghindari jawaban generik).
+5. Stop Conditions: Kriteria penyelesaian yang ketat ("Hanya berhenti jika:" / "Only stop when:") berisi daftar syarat kuantitatif/kualitatif agar output tuntas.
+6. Output: Struktur penyajian akhir yang sangat rapi, beserta rincian elemen yang wajib ada di setiap poin hasil.
+
+Aturan Penting:
+- Tulis seluruh isi ke-6 komponen dalam ${targetLanguage}.
+- Jangan gunakan placeholder kosong seperti [isi di sini]; isilah dengan asumsi cerdas yang realistis berdasarkan konteks prompt singkat pengguna agar prompt siap langsung dipakai.
+- Pertahankan gaya penulisan yang padat, strategis, dan "founder-grade" (tajam dan langsung ke inti).`;
+
+            const payload = {
+                contents: [{
+                    parts: [{
+                        text: `Analisis prompt singkat berikut dan ubah menjadi Master Prompt 6 bagian yang lengkap:\n\n"${shortPrompt}"`
+                    }]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            role: { type: "STRING", description: "Bagian 1: Role & prioritas kerja" },
+                            task: { type: "STRING", description: "Bagian 2: Task utama & deliverable akhir" },
+                            context: { type: "STRING", description: "Bagian 3: Context berupa bullet points fakta, batasan, dan risiko" },
+                            reasoning: { type: "STRING", description: "Bagian 4: Reasoning & standar kualitas berpikir AI" },
+                            stop_conditions: { type: "STRING", description: "Bagian 5: Stop conditions berupa daftar syarat selesai" },
+                            output: { type: "STRING", description: "Bagian 6: Output format & struktur detail tiap item" }
+                        },
+                        required: ["role", "task", "context", "reasoning", "stop_conditions", "output"]
+                    }
+                }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            try {
+                const result = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!rawText) throw new Error("Respons AI kosong.");
+
+                const parsed = JSON.parse(rawText);
+
+                // Isi setiap kolom anatomi
+                fields.role.value = parsed.role || '';
+                fields.task.value = parsed.task || '';
+                fields.context.value = parsed.context || '';
+                fields.reasoning.value = parsed.reasoning || '';
+                fields.stop.value = parsed.stop_conditions || '';
+                fields.output.value = parsed.output || '';
+
+                syncMasterPrompt();
+                statusBadge.textContent = "Teranalisis AI ✓";
+                statusBadge.className = "text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
+                showToast("Master Prompt berhasil dibangun sesuai struktur!");
+
+            } catch (error) {
+                console.error(error);
+                statusBadge.textContent = "Gagal";
+                showToast("Terjadi kendala saat menganalisis prompt. Silakan coba lagi.", "error");
+            } finally {
+                loadingOverlay.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
